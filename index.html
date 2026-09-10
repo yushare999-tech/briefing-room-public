@@ -1,0 +1,1645 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>스마트 브리핑룸 (Briefing Room)</title>
+  <link id="site-favicon" rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏛️</text></svg>">
+  <meta property="og:title" id="og-title" content="스마트 브리핑룸 (Briefing Room)">
+  <meta property="og:description" id="og-description" content="전체 부원 스마트폰 동시 접속 • 실시간 의결 시스템">
+  <meta property="og:image" id="og-image" content="">
+
+  <!-- ========================================================================= -->
+  <!-- 🚀 [사무실-삼식이] 단일 글로벌 버전 기반 동적 Import Map 캐시 버스팅 아키텍처 -->
+  <!-- 개별 JS 파일마다 버전을 하드코딩하지 않고, 오직 window.APP_VERSION 하나로 전체 모듈을 통제합니다. -->
+  <!-- ========================================================================= -->
+  <!-- 👑 [초기 시스템 총괄관리자(Super Admin) 설정 - 절대 주의 및 필수 확인] -->
+  <!-- ⚠️ 이메일 주소의 중요성: -->
+  <!-- 1. Google OAuth 로그인 시 구글 서버가 반환하는 사용자의 실제 이메일과 대조하여 -->
+  <!--    최초의 최고 총괄관리자(Root) 권한을 자동으로 즉시 부여하는 '시스템 마스터 키'입니다. -->
+  <!-- 2. 오타나 공백이 있을 경우, 본인이 로그인하더라도 일반 부원 승인 대기(Pending) 상태에 -->
+  <!--    갇히게 되므로, 실제로 로그인할 본인의 구글 계정(Gmail)을 정확하게 입력해야 합니다. -->
+  <!-- ========================================================================= -->
+  <script>
+    window.APP_VERSION = 'v3.0';
+    window.MASTER_ADMIN_EMAIL = 'admin@yourdomain.com'; // [필수] 본인의 실제 Google 계정 이메일로 변경하세요. // 👈 [총괄관리자] 관리자 구글 계정
+    window.CO_ADMIN_EMAIL = ''; // [선택] 공동관리자 구글 계정 (미사용 시 '')     // 👈 [공동관리자] 공동관리자 구글 계정 (미사용 시 '')
+    (function initModuleImportMap() {
+      const modules = [
+        'main', 'config', 'state', 'utils', 'auth', 'agendas',
+        'gemini', 'kakao', 'presence', 'branding', 'logger'
+      ];
+      const im = { imports: {} };
+      const v = window.APP_VERSION;
+      modules.forEach(function(m) {
+        im.imports['./js/' + m + '.js'] = './js/' + m + '.js?v=' + v;
+        im.imports['/js/' + m + '.js'] = '/js/' + m + '.js?v=' + v;
+        im.imports['js/' + m + '.js'] = './js/' + m + '.js?v=' + v;
+        im.imports['./' + m + '.js'] = './js/' + m + '.js?v=' + v;
+        im.imports[m] = './js/' + m + '.js?v=' + v;
+      });
+      const s = document.createElement('script');
+      s.type = 'importmap';
+      s.textContent = JSON.stringify(im);
+      document.currentScript.after(s);
+    })();
+  </script>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Kakao Official JavaScript SDK -->
+  <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js"></script>
+  <!-- Pretendard Official WebFont CDN -->
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Pretendard', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'Roboto', 'sans-serif'],
+          },
+          colors: {
+            doksan: {
+              50: '#f0f7ff',
+              100: '#e0effe',
+              200: '#bae0fd',
+              500: '#2563eb',
+              600: '#1d4ed8',
+              700: '#1e40af',
+              800: '#1e3a8a',
+              900: '#0f172a',
+              accent: '#0d9488'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Pretendard', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    @keyframes pulse-soft {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    .animate-pulse-soft {
+      animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes commentPopIn {
+      0% {
+        opacity: 0;
+        transform: translateY(14px) scale(0.96);
+      }
+      70% {
+        transform: translateY(-2px) scale(1.01);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    .comment-pop-in {
+      animation: commentPopIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased selection:bg-blue-100 selection:text-blue-700">
+
+  <!-- Netflix-Style Live App Update Floating Banner -->
+  <aside id="update-notification-banner" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-md hidden transition-all duration-300" aria-label="최신 배포 업데이트 알림">
+    <div class="bg-slate-900/95 text-white p-3 sm:p-3.5 rounded-2xl shadow-2xl border border-slate-700/80 backdrop-blur-md flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold text-lg shrink-0 select-none">
+          🚀
+        </div>
+        <div class="text-left min-w-0">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <h4 class="text-xs sm:text-sm font-bold text-white tracking-tight">최신 업데이트 출시</h4>
+            <span id="update-version-tag" class="px-1.5 py-0.2 rounded bg-blue-500/30 text-blue-300 text-[10px] font-mono font-bold border border-blue-400/40">v41</span>
+          </div>
+          <p id="update-desc-text" class="text-[11px] text-slate-300 truncate leading-snug">새로운 기능이 배포되었습니다. 지금 새로고침하세요!</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 shrink-0">
+        <button type="button" onclick="dismissUpdateNotification()" class="px-2 py-1.5 rounded-lg text-[11px] text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer">
+          나중에
+        </button>
+        <button type="button" onclick="applyUpdateReload()" class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold shadow-md shadow-blue-500/20 transition flex items-center gap-1 cursor-pointer">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+          <span>새로고침</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <header id="app-header" class="hidden sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
+    <div class="max-w-6xl mx-auto px-3.5 py-2.5 sm:px-6 sm:py-3">
+      <!-- 모바일 2단 멀티라인 / PC 1단 가로 정렬 -->
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
+        
+        <!-- [1단] 브랜딩 & 실시간 상태 (모바일 가로 전체 시원하게 활용) -->
+        <div class="flex items-center justify-between gap-2 w-full sm:w-auto">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <!-- 🏛️ 로고 / 심볼 (기본 🏛️ 또는 커스텀 이미지) -->
+            <div id="header-logo-container" class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-blue-600 to-teal-500 text-white flex items-center justify-center font-black shadow-sm shadow-blue-500/25 shrink-0 select-none overflow-hidden">
+              <span id="header-logo-icon" class="text-xl sm:text-2xl select-none">🏛️</span>
+            </div>
+            <!-- 타이틀 -->
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5">
+                <h1 id="header-site-title" class="font-extrabold text-slate-900 text-sm sm:text-base md:text-lg tracking-tight truncate">
+                  스마트 브리핑룸
+                </h1>
+                <span id="header-app-version" class="px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-200/80 text-indigo-600 text-[10px] font-mono font-bold shrink-0 shadow-2xs">v3.0</span>
+              </div>
+              <p id="header-site-subtitle" class="text-[11px] text-slate-400 truncate hidden sm:block">전체 부원 스마트폰 동시 접속 • 실시간 의결 시스템</p>
+            </div>
+          </div>
+
+            <!-- 상태 뱃지 -->
+            <div class="shrink-0 flex items-center">
+              <span id="cloud-status-badge" class="bg-emerald-50 border border-emerald-200/70 text-emerald-700 text-[10px] font-bold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1.5 shrink-0 shadow-2xs">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span id="cloud-status-text">로그인 대기</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- [2단] 액션 바 (관리자 콘솔, 로그인/로그아웃): 톱니바퀴 없이 초깔끔 구성 -->
+          <div class="flex items-center justify-between sm:justify-end gap-2 pt-1.5 sm:pt-0 border-t border-slate-100 sm:border-t-0 w-full sm:w-auto">
+            <!-- 좌측: 관리자 콘솔 버튼 및 이용 가이드 -->
+            <div class="flex items-center gap-1.5">
+              <!-- 총괄관리자 전용 감사 이력 버튼 -->
+              <button id="btn-header-audit" onclick="openAuditModal()" class="hidden inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white text-[11px] sm:text-xs font-bold shadow-xs transition whitespace-nowrap active:scale-95" title="총괄관리자 전용 감사 이력 관리">
+                <span>🕵️</span>
+                <span>감사 이력</span>
+              </button>
+              <button id="btn-admin-console" onclick="openAdminModal()" class="hidden inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white text-[11px] sm:text-xs font-bold shadow-xs transition whitespace-nowrap active:scale-95" title="관리자 전용 회원 및 롤 관리 콘솔">
+                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                <span>관리자 콘솔</span>
+                <span id="admin-pending-badge" class="hidden px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[9px] font-black leading-none animate-pulse">0</span>
+              </button>
+              <a href="guide_user.html" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] sm:text-xs font-semibold transition border border-slate-200/60" title="부원용 브리핑룸 사용 설명서 열기">
+                <span>📖</span>
+                <span class="hidden sm:inline">이용 가이드</span>
+              </a>
+            </div>
+
+            <!-- 우측: 사용자 프로필 / 로그인 버튼 -->
+            <div class="flex items-center gap-2 shrink-0 ml-auto">
+              <div id="user-badge" class="flex items-center gap-1.5 shrink-0">
+                <button onclick="handleGoogleLogin()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-bold shadow-xs transition whitespace-nowrap active:scale-95">
+                  <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z"/><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/><path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15s.7 5.3 1.9 7.7l3.7-2.9z"/><path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.4-6.4-5.2L1.9 16c1.8 3.7 5.6 7 10.1 7z"/></svg>
+                  <span>Google 로그인</span>
+                </button>
+                <button onclick="handleKakaoLogin()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FEE500] hover:bg-[#f5db00] border border-[#e6cf00] text-[#3C1E1E] text-xs font-bold shadow-xs transition whitespace-nowrap active:scale-95">
+                  <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="#3C1E1E"><path d="M12 2C6.477 2 2 5.925 2 10.789c0 3.104 1.922 5.825 4.832 7.375l-1.23 4.58a.308.308 0 00.467.346l5.254-3.502A12.297 12.297 0 0012 19.578c5.523 0 10-3.925 10-8.789C22 5.925 17.523 2 12 2z"/></svg>
+                  <span>카카오 로그인</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-1 max-w-6xl w-full mx-auto px-4 py-6">
+
+      <!-- VIEW 0: INITIAL AUTH LOADING SKELETON -->
+      <div id="view-loading" class="py-24 max-w-xl mx-auto text-center flex flex-col items-center justify-center animate-in fade-in duration-200">
+        <div id="loading-logo-container" class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-teal-500 text-white flex items-center justify-center font-black text-3xl mb-5 shadow-lg shadow-blue-500/25 animate-pulse select-none overflow-hidden">
+          <span id="loading-logo-icon">🏛️</span>
+        </div>
+        <div class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white border border-slate-200/80 shadow-xs text-slate-600 text-xs font-bold">
+          <svg class="w-4 h-4 animate-spin text-blue-600 shrink-0" viewBox="0 0 24 24" fill="none">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+          <span>학생회 브리핑룸 연결 중...</span>
+        </div>
+      </div>
+
+      <!-- VIEW 1: LOGGED-OUT STATE HERO -->
+      <div id="view-logged-out" class="hidden py-12 max-w-xl mx-auto text-center animate-in fade-in duration-300">
+        <div class="p-8 rounded-3xl bg-white border border-slate-200/80 shadow-xl relative overflow-hidden">
+          <div id="hero-logo-container" class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-teal-500 text-white mx-auto flex items-center justify-center font-black text-3xl mb-4 shadow-lg shadow-blue-500/25 overflow-hidden">
+            <span id="hero-logo-icon">🏛️</span>
+          </div>
+          <div class="flex items-center justify-center gap-2">
+            <h2 id="hero-site-title" class="text-2xl font-black text-slate-900 tracking-tight">스마트 브리핑룸</h2>
+            <span id="hero-app-version" class="px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-200/80 text-indigo-600 text-xs font-mono font-bold shrink-0 shadow-2xs">v3.0</span>
+          </div>
+          <p class="text-sm text-slate-500 mt-2 leading-relaxed">
+            학생회 공식 계정(카카오톡 또는 Google)으로 로그인해 주세요.<br>
+            승인된 학생회 부원만 실시간 안건 확인 및 의결 투표에 참여할 수 있습니다.
+          </p>
+          <div class="mt-6 pt-6 border-t border-slate-100 flex flex-col items-center gap-3 w-full max-w-xs mx-auto">
+            <!-- 카카오 로그인 버튼 (중앙 카드) -->
+            <button type="button" onclick="handleKakaoLogin()" class="w-full py-3 px-5 rounded-2xl bg-[#FEE500] hover:bg-[#f5db00] text-[#3C1E1E] font-bold text-sm border border-[#e6cf00] shadow-sm transition flex items-center justify-center gap-3 active:scale-98">
+              <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="#3C1E1E"><path d="M12 2C6.477 2 2 5.925 2 10.789c0 3.104 1.922 5.825 4.832 7.375l-1.23 4.58a.308.308 0 00.467.346l5.254-3.502A12.297 12.297 0 0012 19.578c5.523 0 10-3.925 10-8.789C22 5.925 17.523 2 12 2z"/></svg>
+              <span>카카오톡으로 로그인</span>
+            </button>
+            <!-- Google 로그인 버튼 (중앙 카드) -->
+            <button type="button" onclick="handleGoogleLogin()" class="w-full py-3 px-5 rounded-2xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-sm border border-slate-300 shadow-sm transition flex items-center justify-center gap-3 hover:border-slate-400 active:scale-98">
+              <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z"/><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/><path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15s.7 5.3 1.9 7.7l3.7-2.9z"/><path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.4-6.4-5.2L1.9 16c1.8 3.7 5.6 7 10.1 7z"/></svg>
+              <span>Google 계정으로 로그인</span>
+            </button>
+            <span class="text-[11px] text-slate-400 mt-1">카카오톡 또는 구글 계정으로 안전하게 연결됩니다.</span>
+          </div>
+        </div>
+      </div>
+
+    <!-- VIEW 2: PENDING APPROVAL GATE SCREEN -->
+    <div id="view-pending-approval" class="hidden py-10 max-w-xl mx-auto">
+      <div class="p-8 rounded-3xl bg-white border border-amber-200/80 shadow-xl relative overflow-hidden">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-xl shrink-0">
+            <svg class="w-6 h-6 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          </div>
+          <div>
+            <span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-100 text-amber-800">가입 승인 대기중</span>
+            <h3 class="text-lg font-black text-slate-900 mt-0.5">학생회 관리자의 승인을 기다리고 있습니다</h3>
+          </div>
+        </div>
+
+        <p class="text-xs text-slate-600 leading-relaxed mb-5">
+          부원 등록 신청이 정상 접수되었습니다. 학생회 관리자(회장단)의 확인 및 승인이 완료되면 별도의 새로고침 없이 <strong>즉시 실시간 브리핑룸으로 자동 입장</strong>됩니다.
+        </p>
+
+        <!-- Applicant Info Summary Card -->
+        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs space-y-2 mb-6">
+          <div class="flex items-center justify-between pb-1.5 border-b border-slate-200/60">
+            <span class="text-slate-400">신청자 성명</span>
+            <strong id="pending-info-name" class="text-slate-800 font-bold">-</strong>
+          </div>
+          <div class="flex items-center justify-between pb-1.5 border-b border-slate-200/60">
+            <span class="text-slate-400">구글 계정 이메일</span>
+            <span id="pending-info-email" class="text-slate-600 font-medium">-</span>
+          </div>
+          <div class="flex items-center justify-between pb-1.5 border-b border-slate-200/60">
+            <span class="text-slate-400">학년 구분</span>
+            <span id="pending-info-grade" class="text-slate-700 font-semibold">-</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">직책 / 부서</span>
+            <span id="pending-info-role" class="text-blue-700 font-bold bg-blue-50 px-2.5 py-0.5 rounded-md">-</span>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between gap-3 pt-2">
+          <div class="flex items-center gap-2 text-xs text-emerald-600">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+            <span>관리자 승인 실시간 대기중...</span>
+          </div>
+          <button onclick="handleLogout()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold transition">
+            로그아웃
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 3: REJECTED STATE SCREEN -->
+    <div id="view-rejected" class="hidden py-12 max-w-lg mx-auto text-center">
+      <div class="p-8 rounded-3xl bg-white border border-rose-200 shadow-xl">
+        <div class="w-14 h-14 rounded-2xl bg-rose-100 text-rose-600 mx-auto flex items-center justify-center font-bold text-2xl mb-3">
+          ✕
+        </div>
+        <h3 class="text-xl font-black text-slate-900">가입 신청이 반려되었습니다</h3>
+        <p class="text-xs text-slate-500 mt-2 leading-relaxed mb-6">
+          기재된 부원 정보가 확인되지 않았거나 관리자에 의해 가입이 반려되었습니다.<br>
+          오류가 있는 경우 학생회 회장단 또는 담당 부서장에게 문의해 주세요.
+        </p>
+        <button onclick="handleLogout()" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition">
+          다른 계정으로 로그인
+        </button>
+      </div>
+    </div>
+
+    <!-- VIEW 4: MAIN BRIEFING ROOM (Approved Members Only) -->
+    <div id="view-briefing-room" class="hidden">
+
+    <!-- Meeting Rules Banner -->
+    <div class="mb-6 p-4 rounded-2xl bg-gradient-to-r from-blue-900 to-indigo-900 text-white shadow-lg relative overflow-hidden">
+      <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/30 text-blue-200 border border-blue-400/20">효율적인 회의 시스템</span>
+          </div>
+          <h2 class="text-lg sm:text-xl font-bold">카톡 긴 대화 없이, 실시간 안건 회의와 투표를 통한 의결 및 AI 요약까지</h2>
+          <p class="text-xs text-blue-200 mt-1 max-w-2xl leading-relaxed">
+            모든 부원이 실시간으로 언제든지 스마트폰으로 접속하여 투표하면 화면에 실시간으로 즉시 합산됩니다.<br>
+            회의에서는 <strong>현재 진행과정을 공유하고 의결</strong>을 주로 하는 것으로 진행됩니다.
+          </p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button onclick="openNewAgendaModal()" class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-teal-500 hover:bg-teal-400 text-white font-bold text-sm shadow-md transition flex items-center justify-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            새 안건 등록
+          </button>
+        </div>
+      </div>
+      <div class="absolute -right-8 -bottom-8 w-40 h-40 bg-teal-500/10 rounded-full blur-2xl pointer-events-none"></div>
+    </div>
+
+    <!-- Category Filter and Real-Time Active Users Bar -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 pb-2 border-b border-slate-200">
+      <div class="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 custom-scrollbar">
+        <button onclick="filterAgendas('all')" id="tab-all" class="filter-tab active px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-white transition">전체 안건 (<span id="count-all">0</span>)</button>
+        <button onclick="filterAgendas('active')" id="tab-active" class="filter-tab px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 transition">안건 진행중 (<span id="count-active">0</span>)</button>
+        <button onclick="filterAgendas('closed')" id="tab-closed" class="filter-tab px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 transition">의결 완료 (<span id="count-closed">0</span>)</button>
+      </div>
+      <div class="text-xs text-slate-500 flex items-center gap-2 self-end sm:self-auto flex-wrap">
+        <button onclick="toggleOnlineUsersModal()" class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-semibold transition" title="현재 접속 중인 부원 명단 보기">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+          <span>실시간 접속: <strong id="active-users-count">0</strong>명</span>
+        </button>
+        <span id="seed-demo-separator" class="hidden text-slate-300">•</span>
+        <button id="btn-seed-demo" onclick="promptSeedDemoData()" class="hidden text-amber-600 hover:text-amber-800 underline text-[11px] font-semibold" title="기존 예시 안건 및 댓글이 초기화됩니다">🛠️ 예시 안건 초기화 올리기 (디버그)</button>
+      </div>
+    </div>
+
+    <!-- Live Connected Members Bar -->
+    <div class="mb-5 p-3 bg-white rounded-xl border border-slate-200 shadow-2xs flex items-center justify-between gap-3 flex-wrap">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="inline-flex items-center gap-1 text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-md">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          실시간 접속 부원
+        </span>
+        <div id="live-members-chips" class="flex items-center gap-1.5 flex-wrap">
+          <span class="text-xs text-slate-400">접속자 정보를 불러오는 중...</span>
+        </div>
+      </div>
+      <span class="text-[11px] text-slate-400 hidden md:inline">동일 계정으로 여러 기기 접속 시에도 1명으로 안전하게 집계됩니다</span>
+    </div>
+
+    <!-- Agendas Grid Container -->
+    <div id="agendas-container" class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <!-- Agendas dynamically synchronized from cloud database -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="empty-state" class="hidden py-16 text-center">
+      <div class="w-14 h-14 mx-auto rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-3">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+      </div>
+      <h3 class="font-bold text-slate-700 text-base">등록된 안건이 없습니다</h3>
+      <p class="text-xs text-slate-500 mt-1">상단의 '+ 새 안건 등록'을 누르거나 기본 예시 안건을 등록해 보세요.</p>
+    </div>
+
+  </main>
+
+  <footer id="app-footer" class="hidden bg-white border-t border-slate-200 py-5 mt-12 text-center text-xs text-slate-500">
+    <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex flex-col sm:flex-row items-center gap-2 sm:gap-3">
+        <p id="footer-branding-text">© 브리핑룸 운영위원회</p>
+        <span class="hidden sm:inline text-slate-300">|</span>
+        <div class="flex items-center gap-2">
+          <a href="guide_user.html" target="_blank" class="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold transition flex items-center gap-1">
+            <span>📖</span> 부원용 사용 설명서
+          </a>
+          <a href="guide_admin.html" id="footer-guide-admin-link" target="_blank" style="display: none;" class="hidden px-2.5 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold transition flex items-center gap-1">
+            <span>👑</span> 관리자 운영 지침서
+          </a>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="inline-flex items-center gap-1 text-[11px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded font-mono">
+          My UID: <span id="footer-uid" class="font-bold">인증 대기중</span>
+        </span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 0. MEMBER REGISTRATION MODAL (기존 양식과 100% 일치) -->
+  <div id="modal-profile-setup" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+      <div class="text-center mb-5">
+        <div id="setup-modal-logo-container" class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-teal-500 text-white mx-auto flex items-center justify-center font-black text-2xl mb-2 shadow-sm shadow-blue-500/20 overflow-hidden select-none">
+          <span id="setup-modal-logo-icon">🏛️</span>
+        </div>
+        <h3 id="setup-modal-title" class="text-lg font-bold text-slate-900">학생회 부원 등록</h3>
+        <p class="text-xs text-slate-500 mt-1">
+          이름과 소속을 등록하면 실시간 투표 및 의견을 남길 수 있습니다.<br>
+          등록 후 관리자(회장단)의 승인을 거쳐 브리핑룸을 이용할 수 있습니다.
+        </p>
+      </div>
+
+      <form onsubmit="handleNewProfileSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">이름 *</label>
+          <input type="text" id="setup-name" required placeholder="본인의 이름을 입력해 주세요 (예: 김독산)" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">학년 구분 *</label>
+            <select id="setup-grade" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white font-medium">
+              <option value="2학년">2학년</option>
+              <option value="1학년">1학년</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">직책 / 부서 *</label>
+            <select id="setup-role" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white font-medium">
+              <option value="행사기획부">행사기획부</option>
+              <option value="운영지원부">운영지원부</option>
+              <option value="편집소통부">편집소통부</option>
+              <option value="전교회장">전교회장</option>
+              <option value="전교부회장">전교부회장</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Avatar Privacy Selection (2-way: OAuth Photo vs Provider Default Symbol) -->
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+          <label class="block text-xs font-bold text-slate-800">
+            프로필 사진 표시 방식 선택
+          </label>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-slate-200 bg-white cursor-pointer hover:border-blue-300 has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50/50 transition">
+              <input type="radio" name="setup-avatar-type" value="oauth" checked class="text-blue-600 focus:ring-blue-500">
+              <div class="flex items-center gap-1.5 overflow-hidden">
+                <img id="setup-avatar-preview-oauth" src="" alt="" class="w-6 h-6 rounded-full object-cover bg-slate-200 shrink-0">
+                <span class="truncate font-medium text-slate-800">내 소셜 사진</span>
+              </div>
+            </label>
+            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-slate-200 bg-white cursor-pointer hover:border-blue-300 has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50/50 transition">
+              <input type="radio" name="setup-avatar-type" value="provider" class="text-blue-600 focus:ring-blue-500">
+              <div class="flex items-center gap-1.5 overflow-hidden">
+                <div id="setup-avatar-preview-provider" class="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center shrink-0 text-xs">
+                  🏷️
+                </div>
+                <span class="truncate font-medium text-slate-800">기본 심볼</span>
+              </div>
+            </label>
+          </div>
+          <p class="text-[10px] text-slate-400 leading-tight">
+            ※ 실제 얼굴/프로필 사진 노출을 원치 않으시면 '기본 심볼'을 선택하세요.
+          </p>
+        </div>
+
+        <div class="pt-2 flex gap-2">
+          <button type="button" onclick="handleLogout()" class="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition">취소(로그아웃)</button>
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-md transition">부원 등록 신청</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 0-1. PROFILE EDIT MODAL (본인 프로필 수정 모달) -->
+  <div id="modal-profile-edit" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+      <div class="text-center mb-5">
+        <div id="edit-modal-logo-container" class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-teal-500 text-white mx-auto flex items-center justify-center font-black text-2xl mb-2 shadow-sm shadow-blue-500/20 overflow-hidden select-none">
+          <span id="edit-modal-logo-icon">🏛️</span>
+        </div>
+        <h3 id="edit-modal-title" class="text-lg font-bold text-slate-900">학생회 내 프로필 수정</h3>
+        <p class="text-xs text-slate-500 mt-1">
+          이름과 소속 부서를 변경할 수 있습니다.<br>
+          수정된 정보는 실시간 투표 및 의견에 즉시 반영됩니다.
+        </p>
+      </div>
+
+      <form onsubmit="handleProfileEditSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">이름 *</label>
+          <input type="text" id="edit-profile-name" required placeholder="본인의 이름을 입력해 주세요" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">학년 구분 *</label>
+            <select id="edit-profile-grade" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white font-medium">
+              <option value="1학년">1학년</option>
+              <option value="2학년">2학년</option>
+              <option value="3학년">3학년</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">직책 / 부서 *</label>
+            <select id="edit-profile-role" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white font-medium">
+              <option value="행사기획부">행사기획부</option>
+              <option value="운영지원부">운영지원부</option>
+              <option value="편집소통부">편집소통부</option>
+              <option value="미디어홍보부">미디어홍보부</option>
+              <option value="자치선도부">자치선도부</option>
+              <option value="전교회장">전교회장</option>
+              <option value="전교부회장">전교부회장</option>
+              <option value="총괄관리자">총괄관리자</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Avatar Selection (3-way: OAuth photo vs Provider symbol vs Custom Upload) -->
+        <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+          <label class="block text-xs font-bold text-slate-800">
+            프로필 사진 설정
+          </label>
+          <div class="grid grid-cols-3 gap-2 text-xs">
+            <label class="flex flex-col items-center p-2 rounded-lg border border-slate-200 bg-white cursor-pointer hover:border-blue-300 has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50/60 text-center transition">
+              <input type="radio" name="edit-avatar-type" value="oauth" onchange="toggleAvatarUploadBox(false)" class="text-blue-600 focus:ring-blue-500 mb-1">
+              <img id="edit-avatar-preview-oauth" src="" alt="" class="w-7 h-7 rounded-full object-cover bg-slate-200 my-1">
+              <span class="text-[11px] font-medium text-slate-800">소셜 계정 사진</span>
+            </label>
+            <label class="flex flex-col items-center p-2 rounded-lg border border-slate-200 bg-white cursor-pointer hover:border-blue-300 has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50/60 text-center transition">
+              <input type="radio" name="edit-avatar-type" value="provider" onchange="toggleAvatarUploadBox(false)" class="text-blue-600 focus:ring-blue-500 mb-1">
+              <div id="edit-avatar-preview-provider" class="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center my-1 text-xs">
+                🏷️
+              </div>
+              <span class="text-[11px] font-medium text-slate-800">기본 심볼</span>
+            </label>
+            <label class="flex flex-col items-center p-2 rounded-lg border border-slate-200 bg-white cursor-pointer hover:border-blue-300 has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50/60 text-center transition">
+              <input type="radio" name="edit-avatar-type" value="custom" onchange="toggleAvatarUploadBox(true)" class="text-blue-600 focus:ring-blue-500 mb-1">
+              <img id="edit-avatar-preview-custom" src="" alt="" class="w-7 h-7 rounded-full object-cover bg-slate-200 my-1 hidden">
+              <div id="edit-avatar-preview-custom-placeholder" class="w-7 h-7 rounded-full bg-slate-100 border border-dashed border-slate-300 flex items-center justify-center my-1 text-xs text-slate-500 shadow-2xs">
+                📷
+              </div>
+              <span class="text-[11px] font-medium text-slate-800">새 사진 덮어쓰기</span>
+            </label>
+          </div>
+
+          <!-- Custom Avatar Upload File Selector -->
+          <div id="edit-avatar-upload-box" class="pt-1 hidden">
+            <div class="flex items-center gap-2">
+              <input type="file" id="edit-profile-avatar-file" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden" onchange="handleCustomAvatarSelected(event)">
+              <button type="button" onclick="document.getElementById('edit-profile-avatar-file').click()" class="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg transition flex items-center gap-1.5 shadow-2xs">
+                <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                <span>사진 파일 선택</span>
+              </button>
+              <span id="edit-avatar-file-name" class="text-[11px] text-slate-500 truncate max-w-[180px]">선택된 파일 없음</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-2 flex gap-2">
+          <button type="button" onclick="closeProfileEditModal()" class="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition">취소</button>
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-md transition">프로필 저장</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ADMIN CONSOLE MODAL (Full Member & Role Management) -->
+  <div id="modal-admin" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-3xl w-full p-5 sm:p-7 shadow-2xl border border-slate-200 max-h-[92vh] flex flex-col custom-scrollbar overflow-hidden">
+      <!-- Admin Header -->
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100 shrink-0">
+        <div class="flex items-center gap-2.5">
+          <div id="admin-modal-logo-container" class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold overflow-hidden shrink-0 select-none">
+            <span id="admin-modal-logo-icon">🏛️</span>
+          </div>
+          <div>
+            <h3 id="admin-modal-title" class="text-base sm:text-lg font-bold text-slate-900">학생회 관리자 콘솔</h3>
+            <p class="text-xs text-slate-500">회원 가입 승인 및 부서/직책(Role) 권한 관리</p>
+          </div>
+        </div>
+        <button onclick="closeAdminModal()" class="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <!-- Admin Tab Switcher -->
+      <div class="flex items-center justify-between gap-2 pt-3 pb-2 border-b border-slate-100 shrink-0 overflow-x-auto custom-scrollbar">
+        <div class="flex items-center gap-2 shrink-0">
+          <button id="admin-tab-pending" onclick="switchAdminTab('pending')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white transition flex items-center gap-1.5 shrink-0">
+            <span>가입 승인 대기</span>
+            <span id="tab-pending-count-badge" class="px-1.5 py-0.2 rounded-full bg-white/20 text-white text-[10px]">0</span>
+          </button>
+          <button id="admin-tab-members" onclick="switchAdminTab('members')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-1.5 shrink-0">
+            <span>전체 부원 및 롤 관리</span>
+            <span id="tab-members-count-badge" class="px-1.5 py-0.2 rounded-full bg-slate-200 text-slate-700 text-[10px]">0</span>
+          </button>
+          <button id="admin-tab-config" onclick="switchAdminTab('config')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-1.5 shrink-0">
+            <span>🔑 키 & 디버그 설정</span>
+          </button>
+          <button id="admin-tab-branding" onclick="switchAdminTab('branding')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-1.5 shrink-0">
+            <span>🎨 사이트 브랜딩 & 파비콘</span>
+          </button>
+          <button id="admin-tab-backup" onclick="switchAdminTab('backup')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-1.5 shrink-0">
+            <span>📦 백업 & 복원</span>
+          </button>
+        </div>
+        <a href="guide_admin.html" target="_blank" class="px-3 py-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold border border-purple-200 transition flex items-center gap-1 shrink-0 ml-auto" title="관리자 및 임원용 브리핑룸 운영 지침서 열기">
+          <span>📖</span>
+          <span>운영 지침서</span>
+        </a>
+      </div>
+
+      <!-- Tab 1: Pending Approval Content -->
+      <div id="admin-view-pending" class="flex-1 overflow-y-auto py-3 space-y-3 custom-scrollbar">
+        <div id="admin-pending-list" class="space-y-2.5">
+          <!-- Dynamically populated pending cards -->
+        </div>
+      </div>
+
+      <!-- Tab 2: Approved Members Content -->
+      <div id="admin-view-members" class="hidden flex-1 overflow-y-auto py-3 space-y-3 custom-scrollbar">
+        <!-- Search & Filter Controls -->
+        <div class="flex items-center gap-2 pb-2">
+          <input type="text" id="admin-member-search" oninput="renderAdminMembersList()" placeholder="이름 또는 이메일 검색..." class="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          <select id="admin-member-dept-filter" onchange="renderAdminMembersList()" class="px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs bg-white">
+            <option value="all">전체 직책/부서</option>
+            <option value="행사기획부">행사기획부</option>
+            <option value="운영지원부">운영지원부</option>
+            <option value="편집소통부">편집소통부</option>
+            <option value="전교회장">전교회장</option>
+            <option value="전교부회장">전교부회장</option>
+          </select>
+        </div>
+
+        <div id="admin-members-list" class="space-y-2.5">
+          <!-- Dynamically populated member cards -->
+        </div>
+      </div>
+
+      <!-- Tab 3: Kakao Key & Cloud Configuration -->
+      <div id="admin-view-config" class="hidden flex-1 overflow-y-auto py-3 space-y-4 custom-scrollbar">
+        
+        <!-- 시스템 공통 키 안내 뱃지 -->
+        <div class="p-3 bg-blue-50/80 rounded-2xl border border-blue-200/80 flex items-center gap-2 text-xs text-blue-800">
+          <span class="text-base">🌐</span>
+          <span><strong>브리핑룸 공통 환경 변수</strong>: 카카오톡 키 및 Gemini API 키는 전 부원 공통으로 자동 적용됩니다.</span>
+        </div>
+
+        <!-- 섹션 1: 카카오톡 공유 JavaScript 키 -->
+        <div class="p-4 bg-amber-50/70 rounded-2xl border border-amber-200/80 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+              <h4 class="text-sm font-bold text-slate-900">카카오톡 공유 JavaScript 키 (시스템 공통)</h4>
+            </div>
+            <span class="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full">공통 적용 활성 ✅</span>
+          </div>
+          <div class="space-y-1.5">
+            <div class="flex gap-2">
+              <div class="relative flex-1">
+                <input type="password" id="admin-kakao-key-input" value="ef7ff24ae4d10744cfa59d4d3b03f091" class="w-full pl-3.5 pr-9 py-2 rounded-xl border border-slate-300 text-xs font-mono bg-white text-slate-800 focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                <button type="button" id="btn-toggle-kakao-key" onclick="togglePasswordVisibility('admin-kakao-key-input', 'btn-toggle-kakao-key')" title="값 보기" class="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </button>
+              </div>
+              <button type="button" onclick="saveKakaoKeyFromAdmin()" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-xs transition shrink-0">
+                키 저장
+              </button>
+            </div>
+            <p class="text-[11px] text-slate-500">카카오톡 단톡방 안건 공유 시 전 부원 브라우저에서 공통으로 사용됩니다.</p>
+            <div id="admin-kakao-status-indicator-wrap" class="flex items-center gap-1.5 pt-0.5">
+              <span id="admin-kakao-status-indicator" class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span id="admin-kakao-status-text" class="text-[11px] text-emerald-700 font-semibold">등록 완료</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 섹션 1-b: 카카오 로그인 REST API 키 -->
+        <div class="p-4 bg-yellow-50/70 rounded-2xl border border-yellow-200/80 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
+              <h4 class="text-sm font-bold text-slate-900">카카오 로그인 REST API 키 (시스템 공통)</h4>
+            </div>
+            <span class="text-[10px] text-blue-700 font-bold bg-blue-100 px-2 py-0.5 rounded-full">OAuth 로그인용</span>
+          </div>
+          <div class="space-y-1.5">
+            <div class="flex gap-2">
+              <div class="relative flex-1">
+                <input type="password" id="admin-kakao-rest-api-key-input" placeholder="카카오 REST API 키 입력 (예: abc123...)" class="w-full pl-3.5 pr-9 py-2 rounded-xl border border-slate-300 text-xs font-mono bg-white text-slate-800 focus:ring-2 focus:ring-yellow-500 focus:outline-none">
+                <button type="button" id="btn-toggle-kakao-rest-key" onclick="togglePasswordVisibility('admin-kakao-rest-api-key-input', 'btn-toggle-kakao-rest-key')" title="값 보기" class="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </button>
+              </div>
+              <button type="button" onclick="saveKakaoRestApiKey()" class="px-3.5 py-2 rounded-xl bg-yellow-500 hover:bg-yellow-600 text-slate-950 font-bold text-xs shadow-xs transition shrink-0">
+                키 저장
+              </button>
+            </div>
+            <p class="text-[11px] text-slate-500">카카오 로그인 버튼 클릭 시 OAuth 인증에 사용됩니다. 카카오 개발자 콘솔 &gt; 앱 &gt; REST API 키를 입력해 주세요.</p>
+            <div class="flex gap-2 mt-1.5">
+              <div class="relative flex-1">
+                <input type="password" id="admin-kakao-client-secret-input" placeholder="클라이언트 시크릿 (보안 강화 시 선택 입력)" class="w-full pl-3.5 pr-9 py-2 rounded-xl border border-slate-300 text-xs font-mono bg-white text-slate-800 focus:ring-2 focus:ring-yellow-400 focus:outline-none">
+                <button type="button" id="btn-toggle-kakao-secret" onclick="togglePasswordVisibility('admin-kakao-client-secret-input', 'btn-toggle-kakao-secret')" title="값 보기" class="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <p class="text-[11px] text-amber-700 font-medium bg-amber-50 px-2 py-1 rounded-lg">⚠️ 클라이언트 시크릿 활성화(ON) 상태이면 반드시 입력해야 로그인이 작동합니다. 카카오 콘솔 &gt; REST API 키 수정에서 확인하세요.</p>
+          </div>
+        </div>
+
+        <!-- 섹션 2: Google Gemini AI 회의 결론 도출 키 -->
+        <div class="p-4 bg-indigo-50/70 rounded-2xl border border-indigo-200/80 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+              <h4 class="text-sm font-bold text-slate-900">Google Gemini AI 회의 결론 도출 키 (시스템 공통)</h4>
+            </div>
+            <span class="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full">AI 엔진 정상 작동 ✅</span>
+          </div>
+          <div class="space-y-1.5">
+            <div class="flex gap-2">
+              <div class="relative flex-1">
+                <input type="password" id="admin-gemini-key-input" value="AQ.Ab8RN6KqZw6ZD3MAVlYBfnBSbj32JRe2vmkGoApmoOhb7i-kew" class="w-full pl-3.5 pr-9 py-2 rounded-xl border border-slate-300 text-xs font-mono bg-white text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <button type="button" id="btn-toggle-gemini-key" onclick="togglePasswordVisibility('admin-gemini-key-input', 'btn-toggle-gemini-key')" title="값 보기" class="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </button>
+              </div>
+              <button type="button" onclick="saveGeminiKeyFromAdmin()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition shrink-0">
+                키 저장
+              </button>
+            </div>
+            <p class="text-[11px] text-slate-500">부원 전체 댓글과 투표율을 종합 분석하여 회의 권고 결론을 백그라운드로 자동 도출합니다.</p>
+          </div>
+        </div>
+
+        <!-- 섹션 3: 🛠️ 관리자 테스트 디버그 모드 (댓글 페르소나 설정) -->
+        <div class="p-4 bg-purple-50/80 rounded-2xl border border-purple-200 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-purple-600 animate-pulse"></span>
+              <h4 class="text-sm font-bold text-purple-950">🛠️ 관리자 테스트 디버그 모드 (댓글 페르소나 설정)</h4>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="admin-debug-mode-toggle" onchange="toggleAdminDebugMode(this.checked)" class="sr-only peer">
+              <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+            </label>
+          </div>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            디버그 모드를 활성화하면 <strong>클라우드 DB에 공통 저장</strong>되어 모든 기기(PC/스마트폰)의 관리자 화면 댓글란에 [가상 작성자 이름]과 [직책/부서] 입력칸이 실시간 노출됩니다.<br>
+            일반 부원 화면에는 일절 노출되지 않으며, 원하는 이름으로 테스트 의견을 작성하여 AI 수석 서기 요약 엔진을 즉각 테스트할 수 있습니다.
+          </p>
+          <div id="admin-debug-status-text" class="text-xs font-semibold text-purple-800 bg-purple-100 px-3 py-1.5 rounded-xl">
+            현재 상태: 디버그 모드 비활성화 (기본 관리자 계정으로 댓글 작성)
+          </div>
+        </div>
+
+        <!-- 도메인 등록 필수 안내 -->
+        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-600 space-y-2">
+          <h5 class="font-bold text-slate-800 flex items-center gap-1.5">
+            <span>📌 호스팅 서비스 접속 주소</span>
+          </h5>
+          <code class="bg-white px-2 py-1 rounded border border-slate-200 text-slate-700 font-mono select-all block">https://your-project.web.app</code>
+        </div>
+
+      </div>
+
+      <!-- Tab 4: Site Branding & Favicon Settings -->
+      <div id="admin-view-branding" class="flex-1 overflow-y-auto py-3 space-y-4 custom-scrollbar hidden">
+        <!-- 실시간 헤더 및 파비콘 라이브 미리보기 -->
+        <div class="p-4 bg-gradient-to-br from-slate-900 to-indigo-950 rounded-2xl text-white shadow-md space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold tracking-wide uppercase text-indigo-300">Live Preview (실시간 미리보기)</span>
+            <div class="flex items-center gap-1.5 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700 text-[11px]">
+              <img id="branding-preview-favicon" src="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏛️</text></svg>" class="w-4 h-4 rounded-sm object-contain" alt="파비콘" />
+              <span class="text-slate-300">브라우저 탭 아이콘</span>
+            </div>
+          </div>
+
+          <!-- 헤더 렌더링 미리보기 -->
+          <div class="p-3 bg-white/10 rounded-xl border border-white/15 flex items-center gap-3">
+            <div id="branding-preview-logo" class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-teal-400 text-white flex items-center justify-center font-bold shrink-0 overflow-hidden shadow-sm">
+              <span class="text-xl">🏛️</span>
+            </div>
+            <div class="min-w-0 flex-1">
+              <div id="branding-preview-title" class="font-bold text-sm sm:text-base truncate text-white">스마트 브리핑룸</div>
+              <div id="branding-preview-subtitle" class="text-[11px] text-slate-300 truncate">전체 부원 스마트폰 동시 접속 • 실시간 의결 시스템</div>
+            </div>
+          </div>
+
+          <!-- 등록된 썸네일 카드 미리보기 -->
+          <div class="flex items-center gap-2 pt-1 text-xs text-indigo-200">
+            <img id="branding-preview-thumb" src="" class="w-12 h-12 rounded-lg object-cover border border-white/20 hidden" alt="썸네일" />
+            <span class="text-[11px] text-slate-300">대표 썸네일은 카카오톡 링크 공유 카드 및 SNS 미리보기에 자동 사용됩니다.</span>
+          </div>
+        </div>
+
+        <!-- 설정 입력 폼 -->
+        <div class="space-y-3.5">
+          <!-- 1. 사이트 타이틀 & 서브 슬로건 -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">사이트 타이틀</label>
+              <input type="text" id="branding-title-input" placeholder="예: 스마트 브리핑룸" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs bg-white text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">기본 로고 심볼 / 이모지</label>
+              <div class="flex gap-2">
+                <input type="text" id="branding-emoji-input" value="🏛️" maxlength="4" class="w-16 text-center px-2 py-2 rounded-xl border border-slate-300 text-base bg-white text-slate-800 font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <span class="text-[11px] text-slate-400 self-center">커스텀 이미지 미지정 시 표시될 심볼 (기본값: 🏛️)</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">서브 슬로건 (부제목)</label>
+            <input type="text" id="branding-subtitle-input" placeholder="예: 전체 부원 스마트폰 동시 접속 • 실시간 의결 시스템" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs bg-white text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          </div>
+
+          <!-- 2. 대표 썸네일 & 파비콘 일원화 등록 영역 -->
+          <div class="p-4 bg-indigo-50/70 rounded-2xl border border-indigo-200/80 space-y-3">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+                <h4 class="text-xs sm:text-sm font-bold text-indigo-950">대표 썸네일 & 파비콘 자동 생성</h4>
+              </div>
+              <span class="text-[10px] text-indigo-700 font-bold bg-indigo-100 px-2 py-0.5 rounded-full">32×32 파비콘 자동 크롭 변환</span>
+            </div>
+            <p class="text-[11px] text-slate-600 leading-relaxed">
+              학교 로고나 마스코트 이미지 1장만 등록하면, <strong>카카오톡 공유 썸네일</strong>과 <strong>브라우저 탭 파비콘</strong>이 한 번에 자동 완성됩니다.
+            </p>
+
+            <!-- 파일 업로드 & URL 입력 -->
+            <div class="space-y-2">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-700 mb-1">방법 1: 내 기기에서 이미지 파일 선택 업로드</label>
+                <input type="file" id="branding-thumbnail-file" accept="image/*" onchange="if(this.files[0]) handleThumbnailFileUpload(this.files[0])" class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 file:cursor-pointer">
+                <p id="branding-upload-status" class="text-[11px] text-indigo-600 font-medium mt-1"></p>
+              </div>
+
+              <div class="pt-1">
+                <label class="block text-[11px] font-semibold text-slate-700 mb-1">방법 2: 외부 이미지 URL 직접 입력</label>
+                <input type="url" id="branding-thumb-url-input" placeholder="https://example.com/logo.png" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-mono bg-white text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              </div>
+
+              <!-- 옵션: 헤더 로고로도 사용 -->
+              <div class="pt-2 flex items-center gap-2">
+                <input type="checkbox" id="branding-use-custom-logo" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300">
+                <label for="branding-use-custom-logo" class="text-xs font-semibold text-slate-700 cursor-pointer">
+                  업로드한 썸네일 이미지를 헤더 좌측 로고(아이콘)로도 사용
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- 저장 및 복원 액션 버튼 -->
+          <div class="flex items-center justify-between pt-2 border-t border-slate-100 flex-wrap gap-2">
+            <button type="button" onclick="resetBrandingToDefault()" class="px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs font-bold transition">
+              기본값(🏛️)으로 복원
+            </button>
+            <button type="button" onclick="saveBrandingSettings()" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm transition active:scale-95">
+              브랜딩 설정 저장
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 5: Data Backup, Restore & Agenda Seed Addition -->
+      <div id="admin-view-backup" class="hidden flex-1 overflow-y-auto py-3 space-y-4 custom-scrollbar">
+        
+        <!-- 섹션 1: 신규 표준 안건 2개 추가 (누적 등록) -->
+        <div class="p-4 bg-emerald-50/70 rounded-2xl border border-emerald-200/80 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+              <h4 class="text-xs sm:text-sm font-bold text-emerald-950">표준 신규 안건 2개 추가 등록 (누적 등록)</h4>
+            </div>
+            <span class="text-[10px] text-emerald-800 font-bold bg-emerald-100 px-2 py-0.5 rounded-full">데이터 보존 누적</span>
+          </div>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            기존에 등록된 안건이나 부원들의 소중한 투표·댓글 데이터를 전혀 삭제하지 않고, 
+            <strong>자율학습실 좌석 예약제 및 인스타그램 숏폼 릴스 운영안 2개</strong>(각 10개 실전 댓글 및 선택지 포함)를 새롭게 추가 등록합니다.
+          </p>
+          <div class="pt-1">
+            <button type="button" onclick="addNewDemoAgendas()" class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition active:scale-95 flex items-center justify-center gap-1.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+              <span>+ 표준 신규 안건 2개 추가 등록</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 섹션 2: 전체 안건 및 댓글 풀 백업 (JSON Export) -->
+        <div class="p-4 bg-purple-50/70 rounded-2xl border border-purple-200/80 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-purple-600"></span>
+              <h4 class="text-xs sm:text-sm font-bold text-purple-950">전체 안건 및 댓글 풀 백업 다운로드</h4>
+            </div>
+            <span class="text-[10px] text-purple-800 font-bold bg-purple-100 px-2 py-0.5 rounded-full">JSON 파일 저장</span>
+          </div>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            모든 안건과 각 안건의 하위 실전 댓글, 투표수 집계, Gemini AI 요약 히스토리를 1개의 순수 JSON 파일로 패키징하여 
+            즉시 내 PC나 스마트폰으로 안전하게 내려받습니다. (약 30~80KB의 초경량 파일)
+          </p>
+          <div class="pt-1">
+            <button type="button" onclick="exportFullBackupJson()" class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-sm transition active:scale-95 flex items-center justify-center gap-1.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+              <span>📦 전체 안건 및 댓글 풀 백업 다운로드 (JSON)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 섹션 3: 백업 파일 복원 (Restore) -->
+        <div class="p-4 bg-indigo-50/70 rounded-2xl border border-indigo-200/80 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+              <h4 class="text-xs sm:text-sm font-bold text-indigo-950">백업 파일 불러오기 및 데이터 복원 (Restore)</h4>
+            </div>
+            <span class="text-[10px] text-indigo-800 font-bold bg-indigo-100 px-2 py-0.5 rounded-full">2가지 복원 모드</span>
+          </div>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            이전에 백업해 둔 <code>.json</code> 파일을 불러옵니다. 
+            파일을 선택하면 <strong>기존 데이터를 유지하고 추가(Append)</strong>할지, <strong>전체 덮어쓰기(Overwrite)</strong>할지 안전하게 선택할 수 있습니다.
+          </p>
+          <div class="pt-1">
+            <input type="file" id="admin-restore-file-input" accept=".json,application/json" class="hidden" onchange="handleRestoreFileSelected(event)">
+            <button type="button" onclick="document.getElementById('admin-restore-file-input').click()" class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm transition active:scale-95 flex items-center justify-center gap-1.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l4-4m0 0l4 4m-4-4v12"></path></svg>
+              <span>📂 백업 파일 선택 (.json)</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- MASTER ADMIN EXCLUSIVE AUDIT LOG MODAL (총괄관리자 전용 독립 감사 원장 모달) -->
+  <div id="modal-audit-log" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-4xl w-full p-4 sm:p-6 shadow-2xl border border-slate-200 max-h-[92vh] flex flex-col">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-600 text-white flex items-center justify-center shadow-md shadow-purple-500/20 text-lg">
+            <span>🕵️</span>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">학생회 감사 이력 관리 원장</h3>
+              <span class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold border border-purple-200">총괄관리자 전용</span>
+            </div>
+            <p class="text-xs text-slate-500">투표, 의견 피드백, 안건, AI 요약, 부원 관리 등 플랫폼 내 모든 행위의 불변 감사 원장</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeAuditModal()" class="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <!-- Modal Body (Audit View) -->
+      <div class="flex-1 overflow-y-auto py-3 space-y-3 custom-scrollbar">
+        <!-- 감사 이력 상단 컨트롤 바 -->
+        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-2.5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-purple-600 animate-pulse"></span>
+              <h4 class="text-xs sm:text-sm font-bold text-slate-900">플랫폼 실시간 활동 감사 이력</h4>
+              <span id="audit-log-count" class="text-[10px] font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">0건</span>
+            </div>
+            <!-- 내보내기 및 관리 버튼 그룹 -->
+            <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-auto flex-wrap">
+              <button type="button" onclick="exportAuditLogsCsv()" class="px-2.5 py-1.5 rounded-xl bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold transition flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95" title="CSV 엑셀 파일로 내보내기">
+                <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                <span>CSV</span>
+              </button>
+              <button type="button" onclick="exportAuditLogsJson()" class="px-2.5 py-1.5 rounded-xl bg-white hover:bg-purple-50 text-purple-700 border border-purple-200 text-xs font-semibold transition flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95" title="JSON 백업 파일로 내보내기">
+                <svg class="w-3.5 h-3.5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                <span>JSON</span>
+              </button>
+              <!-- 오프라인 백업 JSON 파일 열기 -->
+              <input type="file" id="audit-offline-file-input" accept=".json,application/json" class="hidden" onchange="handleOfflineAuditFileSelected(event)">
+              <button type="button" onclick="document.getElementById('audit-offline-file-input').click()" class="px-2.5 py-1.5 rounded-xl bg-white hover:bg-blue-50 text-blue-700 border border-blue-200 text-xs font-semibold transition flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95" title="과거 백업 JSON 파일 브라우저 즉시 열람">
+                <svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"></path></svg>
+                <span>백업 열람</span>
+              </button>
+              <!-- 백업 후 안전 정리(Purge) -->
+              <button type="button" onclick="openAuditPurgeModal()" class="px-2.5 py-1.5 rounded-xl bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 text-xs font-semibold transition flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95" title="전체 백업 다운로드 후 이전 로그 안전 정리">
+                <svg class="w-3.5 h-3.5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                <span>백업 후 정리</span>
+              </button>
+              <button type="button" onclick="loadActivityLogs(true)" class="p-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold transition shadow-2xs cursor-pointer active:scale-95" title="새로고침">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- 필터 & 검색 툴바 -->
+          <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+            <select id="audit-category-select" onchange="filterActivityLogsByCategory(this.value)" class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs bg-white font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500 shrink-0">
+              <option value="ALL">전체 카테고리</option>
+              <option value="VOTE">투표 참여 / 변경 (VOTE)</option>
+              <option value="COMMENT">의견 피드백 / 블라인드 (COMMENT)</option>
+              <option value="AGENDA">안건 발의 / 의결 마감 (AGENDA)</option>
+              <option value="AI">Gemini AI 회의 요약 / 복사 (AI)</option>
+              <option value="MEMBER">부원 승인 / 롤 변경 (MEMBER)</option>
+              <option value="ADMIN">시스템 설정 / 권한 (ADMIN)</option>
+              <option value="AUTH">로그인 / 세션 (AUTH)</option>
+            </select>
+            <div class="relative flex-1">
+              <input type="text" id="audit-search-input" oninput="handleAuditLogSearch(this.value)" placeholder="부원 이름, 직책, 이메일, 카카오번호, 안건명 검색..." class="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 text-xs bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500">
+              <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- 오프라인 백업 열람 안내 배너 -->
+        <div id="audit-offline-banner" class="hidden p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl flex items-center justify-between gap-2 shadow-2xs">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span class="text-lg">📁</span>
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-xs font-bold text-blue-950">오프라인 백업 파일 열람 모드</span>
+                <span id="audit-offline-filename" class="text-[10px] font-mono text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">backup.json</span>
+              </div>
+              <p class="text-[11px] text-blue-700">클라우드 DB 쓰기 없이 백업 파일의 원본 데이터를 안전하게 열람 및 검색 중입니다.</p>
+            </div>
+          </div>
+          <button type="button" onclick="exitOfflineAuditLogViewer()" class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition shrink-0 flex items-center gap-1 cursor-pointer active:scale-95">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+            <span>실시간 DB 복귀</span>
+          </button>
+        </div>
+
+        <!-- 감사 로그 카드 리스트 컨테이너 -->
+        <div id="audit-logs-container" class="space-y-2">
+          <!-- 동적으로 채워짐 -->
+        </div>
+
+        <!-- 로딩 스피너 -->
+        <div id="audit-logs-spinner" class="py-4 text-center hidden">
+          <svg class="w-5 h-5 animate-spin mx-auto text-purple-600" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+          <span class="text-[11px] text-slate-400 mt-1 block">이력을 불러오는 중입니다...</span>
+        </div>
+
+        <!-- 50건 페이징 더보기 버튼 -->
+        <div class="pt-2 text-center">
+          <button type="button" id="btn-audit-load-more" onclick="loadActivityLogs(false)" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95 hidden">
+            <span>↓ 이전 활동 이력 더보기 (50건)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="pt-3 border-t border-slate-100 flex items-center justify-between shrink-0">
+        <span class="text-[11px] text-slate-400">보안 등급: 1급 기밀 (총괄관리자 단독 접근 인가 원장)</span>
+        <button type="button" onclick="closeAuditModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition cursor-pointer">
+          닫기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MASTER ADMIN AUDIT LOG PURGE MODAL (백업 선행 후 안전 정리 모달) -->
+  <div id="modal-audit-purge" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-base">
+            <span>🧹</span>
+          </div>
+          <h3 class="text-base font-bold text-slate-900">감사 원장 백업 후 안전 정리</h3>
+        </div>
+        <button type="button" onclick="closeAuditPurgeModal()" class="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <!-- 안내 및 1단계: 백업 다운로드 보장 -->
+      <div class="p-3 bg-amber-50 rounded-2xl border border-amber-200/80 space-y-1">
+        <div class="flex items-center gap-1.5 text-amber-900 font-bold text-xs">
+          <span>🛡️ 데이터 유실 0% 안전 보장 원칙</span>
+        </div>
+        <p class="text-[11px] text-amber-800 leading-relaxed">
+          정리 작업을 진행하기 전, <strong>현재까지의 전체 감사 로그 JSON 백업 파일이 관리자 기기에 먼저 자동 다운로드</strong>됩니다. 백업을 확인한 후 안전하게 정리하세요.
+        </p>
+      </div>
+
+      <!-- 정리 범위 선택 -->
+      <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-700 block">정리 대상 범위 선택</label>
+        <div class="space-y-1.5 text-xs text-slate-700">
+          <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition">
+            <input type="radio" name="audit-purge-range" value="30days" checked class="text-purple-600 focus:ring-purple-500">
+            <div class="flex-1">
+              <span class="font-bold">30일 이전 로그만 정리</span>
+              <p class="text-[11px] text-slate-500">최근 30일 이내의 감사 이력은 보존합니다.</p>
+            </div>
+          </label>
+          <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition">
+            <input type="radio" name="audit-purge-range" value="90days" class="text-purple-600 focus:ring-purple-500">
+            <div class="flex-1">
+              <span class="font-bold">90일(1분기) 이전 로그만 정리</span>
+              <p class="text-[11px] text-slate-500">최근 90일간의 활동은 그대로 유지합니다.</p>
+            </div>
+          </label>
+          <label class="flex items-center gap-2 p-2 rounded-xl border border-rose-200 bg-rose-50/50 hover:bg-rose-50 cursor-pointer transition">
+            <input type="radio" name="audit-purge-range" value="all" class="text-rose-600 focus:ring-rose-500">
+            <div class="flex-1">
+              <span class="font-bold text-rose-900">전체 감사 원장 초기화 (완전 리셋)</span>
+              <p class="text-[11px] text-rose-700">기존 모든 로그를 비우고 깨끗한 상태로 시작합니다.</p>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- 안전 확인 입력창 -->
+      <div class="space-y-1.5 pt-1">
+        <label for="audit-purge-confirm-input" class="text-xs font-bold text-slate-700 block">
+          실행 확인 (아래에 <span class="text-rose-600 underline font-extrabold">정리</span>를 입력해 주세요)
+        </label>
+        <input type="text" id="audit-purge-confirm-input" placeholder="정리" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500">
+      </div>
+
+      <!-- 액션 버튼 -->
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+        <button type="button" onclick="closeAuditPurgeModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition cursor-pointer">
+          취소
+        </button>
+        <button type="button" id="btn-audit-purge-submit" onclick="executeAuditLogPurge()" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-sm transition flex items-center gap-1.5 cursor-pointer active:scale-95">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+          <span>백업 다운로드 & 정리 실행</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN MEMBER DETAIL & PROFILE VIEW MODAL (댓글 작성자 클릭 시 팝업) -->
+  <div id="modal-admin-member-view" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+      <div class="text-center mb-4">
+        <!-- Dynamic Avatar & Provider Badge -->
+        <div id="admin-member-view-avatar-container" class="relative w-16 h-16 mx-auto mb-2.5 flex items-center justify-center">
+          <img id="admin-member-view-avatar" src="" alt="프로필" class="w-16 h-16 rounded-2xl object-cover border-2 border-indigo-100 shadow-md bg-slate-100">
+          <div id="admin-member-view-symbol-wrap" class="w-16 h-16 rounded-2xl border-2 border-indigo-100 shadow-md flex items-center justify-center hidden overflow-hidden"></div>
+          <div id="admin-member-view-provider-icon" class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white shadow flex items-center justify-center text-xs border border-slate-100">
+            <!-- Kakao or Google Icon -->
+          </div>
+        </div>
+
+        <h3 id="admin-member-view-title" class="text-lg font-bold text-slate-900">학생회 부원 프로필</h3>
+        <p class="text-xs text-slate-500 mt-0.5">선택한 부원의 계정 정보 및 소속 부서입니다.</p>
+
+        <!-- Provider Badge Row -->
+        <div class="flex items-center justify-center gap-2 mt-2">
+          <span id="admin-member-view-provider-badge" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold inline-flex items-center gap-1 bg-amber-100 text-amber-900">
+            <span>🟡</span> 카카오 로그인
+          </span>
+          <span id="admin-member-view-role-badge" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 text-purple-800">
+            부원
+          </span>
+        </div>
+      </div>
+
+      <form onsubmit="handleAdminMemberViewSave(event)" class="space-y-3.5 text-xs">
+        <input type="hidden" id="admin-member-view-uid">
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">이름 *</label>
+          <input type="text" id="admin-member-view-name" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">학년 구분 *</label>
+            <select id="admin-member-view-grade" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white font-medium">
+              <option value="1학년">1학년</option>
+              <option value="2학년">2학년</option>
+              <option value="3학년">3학년</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">직책 / 부서 *</label>
+            <select id="admin-member-view-role" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white font-medium">
+              <option value="행사기획부">행사기획부</option>
+              <option value="운영지원부">운영지원부</option>
+              <option value="편집소통부">편집소통부</option>
+              <option value="미디어홍보부">미디어홍보부</option>
+              <option value="자치선도부">자치선도부</option>
+              <option value="전교회장">전교회장</option>
+              <option value="전교부회장">전교부회장</option>
+              <option value="총괄관리자">총괄관리자</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-600 space-y-1 text-[11px]">
+          <div class="flex justify-between">
+            <span class="text-slate-400">계정 이메일:</span>
+            <span id="admin-member-view-email" class="font-mono font-medium text-slate-700 truncate max-w-[210px]">-</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">회원 고유 ID:</span>
+            <span id="admin-member-view-uid-text" class="font-mono text-[10px] text-slate-500 truncate max-w-[210px]">-</span>
+          </div>
+        </div>
+
+        <div class="pt-2 flex gap-2">
+          <button type="button" onclick="closeAdminMemberViewModal()" class="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition">닫기</button>
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-md shadow-indigo-500/20 transition">프로필 저장</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- RESTORE OPTIONS MODAL (백업 복원 방식 선택 모달) -->
+  <div id="modal-restore-options" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+      <div class="text-center">
+        <div class="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-2xl mx-auto mb-2.5 shadow-sm">
+          📦
+        </div>
+        <h3 class="text-base sm:text-lg font-bold text-slate-900">백업 데이터 복원 옵션 선택</h3>
+        <p class="text-xs text-slate-500 mt-1">불러온 백업 파일 내용을 확인하고 복원 방식을 선택해 주세요.</p>
+      </div>
+
+      <!-- Backup Summary Info Box -->
+      <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1.5">
+        <div class="flex justify-between">
+          <span class="text-slate-500">백업 파일명:</span>
+          <span id="restore-info-filename" class="font-mono font-bold text-slate-800 truncate max-w-[200px]">-</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-500">포함된 안건 수:</span>
+          <span id="restore-info-agenda-count" class="font-bold text-indigo-600">0개</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-500">포함된 총 댓글 수:</span>
+          <span id="restore-info-comment-count" class="font-bold text-slate-800">0개</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-500">백업 생성 일시:</span>
+          <span id="restore-info-date" class="text-slate-600">-</span>
+        </div>
+      </div>
+
+      <!-- Mode Selections -->
+      <div class="space-y-2.5 pt-1">
+        <button type="button" onclick="executeRestoreBackup('append')" class="w-full p-3.5 rounded-2xl border-2 border-emerald-500 bg-emerald-50/50 hover:bg-emerald-50 text-left transition space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+              <span>➕</span> 기존 DB 유지하고 추가하기 (Append)
+            </span>
+            <span class="px-2 py-0.5 rounded bg-emerald-200 text-emerald-900 text-[10px] font-bold">권장</span>
+          </div>
+          <p class="text-[11px] text-emerald-900/80 leading-relaxed">
+            현재 등록된 안건과 투표를 그대로 유지하면서, 백업 파일의 안건들을 새 안건으로 안전하게 누적 추가합니다.
+          </p>
+        </button>
+
+        <button type="button" onclick="executeRestoreBackup('overwrite')" class="w-full p-3.5 rounded-2xl border border-rose-300 bg-rose-50/30 hover:bg-rose-50 text-left transition space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-rose-950 flex items-center gap-1.5">
+              <span>⚠️</span> 기존 DB 전체 덮어쓰기 (Overwrite)
+            </span>
+            <span class="px-2 py-0.5 rounded bg-rose-200 text-rose-900 text-[10px] font-bold">주의</span>
+          </div>
+          <p class="text-[11px] text-rose-900/80 leading-relaxed">
+            기존 안건 및 댓글을 완전히 삭제하고, 백업 파일 데이터로 100% 교체합니다. (실행 전 확인 창 제공)
+          </p>
+        </button>
+      </div>
+
+      <div class="pt-2">
+        <button type="button" onclick="closeRestoreOptionsModal()" class="w-full py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50 transition">
+          복원 취소
+        </button>
+      </div>
+    </div>
+  </div>
+
+  
+
+  <!-- 2. NEW AGENDA CREATION MODAL -->
+  <div id="modal-new-agenda" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto custom-scrollbar">
+      <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+        <div>
+          <h3 class="text-base font-bold text-slate-900">새 회의 안건 등록</h3>
+          <p class="text-xs text-slate-500">부원들이 회의 전에 투표할 수 있도록 명확히 작성해 주세요.</p>
+        </div>
+        <button onclick="closeNewAgendaModal()" class="text-slate-400 hover:text-slate-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <form onsubmit="handleCreateAgenda(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">안건 분류</label>
+          <select id="agenda-category" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
+            <option value="축제/행사">축제 / 행사 기획</option>
+            <option value="학생복지/시설">학생복지 / 시설 개선</option>
+            <option value="예산/물품">예산 집행 / 물품 구매</option>
+            <option value="정례운영">학생회 내부 운영 / 규칙</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">안건 제목 *</label>
+          <input type="text" id="agenda-title" required placeholder="예: 1학기 체육대회 간식 품목 최종 선정의 건" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">안건 상세 내용 및 배경 *</label>
+          <textarea id="agenda-desc" required rows="3" placeholder="배경 설명, 예상 소요 예산, 회의에서 결정되어야 하는 사항을 적어주세요." class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+        </div>
+
+        <div class="p-3 bg-slate-50/80 rounded-xl border border-slate-200">
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+              <span>투표 선택지 구성</span>
+              <span class="text-[10px] text-slate-400 font-normal">(선택사항)</span>
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer text-xs text-slate-700 bg-white px-2 py-1 rounded-lg border border-slate-200 shadow-2xs hover:bg-slate-50 transition">
+              <input type="checkbox" id="agenda-enable-vote" checked onchange="toggleVoteOptionsInput(this.checked)" class="rounded text-blue-600 focus:ring-blue-500 w-3.5 h-3.5">
+              <span class="text-xs font-semibold text-blue-700">투표 진행하기</span>
+            </label>
+          </div>
+
+          <div id="vote-options-wrapper" class="space-y-2">
+            <div class="space-y-2" id="options-container">
+              <input type="text" class="agenda-opt-input w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs" value="찬성 (동의합니다)" required>
+              <input type="text" class="agenda-opt-input w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs" value="반대 (수정/보완 필요)" required>
+            </div>
+            <button type="button" onclick="addOptionInput()" class="mt-2 text-xs text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1">
+              + 선택지 추가 (최대 10개)
+            </button>
+          </div>
+
+          <p id="vote-options-notice" class="hidden text-xs text-slate-600 bg-white p-2.5 rounded-lg border border-slate-200">
+            💬 <strong>의견 수렴 전용 안건</strong>: 투표 없이 하단 댓글창에서 부원들의 자유 의견과 피드백을 수렴합니다.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">필요 부서 *</label>
+            <select id="agenda-target-dept" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white font-medium">
+              <option value="행사기획부">행사기획부</option>
+              <option value="운영지원부">운영지원부</option>
+              <option value="편집소통부">편집소통부</option>
+              <option value="전체 부서 (공통)">전체 부서 (공통)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">작성자</label>
+            <input type="text" id="agenda-author" readonly class="w-full px-3 py-2 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 font-medium">
+          </div>
+        </div>
+
+        <div class="pt-3 flex gap-2">
+          <button type="button" onclick="closeNewAgendaModal()" class="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50 transition">취소</button>
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow transition">실시간 게시하기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. EDIT AGENDA MODAL -->
+  <div id="modal-edit-agenda" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto custom-scrollbar">
+      <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+        <div>
+          <h3 class="text-base font-bold text-slate-900">안건 내용 수정</h3>
+          <p class="text-xs text-slate-500">안건의 분류, 제목, 배경 설명 및 필요 부서를 수정합니다.</p>
+        </div>
+        <button onclick="closeEditAgendaModal()" class="text-slate-400 hover:text-slate-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <form onsubmit="handleUpdateAgenda(event)" class="space-y-4">
+        <input type="hidden" id="edit-agenda-id">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">안건 분류</label>
+          <select id="edit-agenda-category" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
+            <option value="축제/행사">축제 / 행사 기획</option>
+            <option value="학생복지/시설">학생복지 / 시설 개선</option>
+            <option value="예산/물품">예산 집행 / 물품 구매</option>
+            <option value="정례운영">학생회 내부 운영 / 규칙</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">안건 제목 *</label>
+          <input type="text" id="edit-agenda-title" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">안건 상세 내용 및 배경 *</label>
+          <textarea id="edit-agenda-desc" required rows="4" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+        </div>
+
+        <div class="p-3 bg-slate-50/80 rounded-xl border border-slate-200">
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+              <span>투표 선택지 수정</span>
+              <span class="text-[10px] text-slate-400 font-normal">(선택사항)</span>
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer text-xs text-slate-700 bg-white px-2 py-1 rounded-lg border border-slate-200 shadow-2xs hover:bg-slate-50 transition">
+              <input type="checkbox" id="edit-agenda-enable-vote" checked onchange="toggleEditVoteOptionsInput(this.checked)" class="rounded text-blue-600 focus:ring-blue-500 w-3.5 h-3.5">
+              <span class="text-xs font-semibold text-blue-700">투표 진행하기</span>
+            </label>
+          </div>
+
+          <div id="edit-vote-options-wrapper" class="space-y-2">
+            <div class="space-y-2" id="edit-options-container">
+              <!-- Dynamically populated with options -->
+            </div>
+            <button type="button" onclick="addEditOptionInput()" class="mt-2 text-xs text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1">
+              + 선택지 추가 (최대 10개)
+            </button>
+          </div>
+
+          <p id="edit-vote-options-notice" class="hidden text-xs text-slate-600 bg-white p-2.5 rounded-lg border border-slate-200">
+            💬 <strong>의견 수렴 전용 안건</strong>: 투표 없이 하단 댓글창에서 부원들의 자유 의견과 피드백을 수렴합니다.
+          </p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">필요 부서 *</label>
+          <select id="edit-agenda-target-dept" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white font-medium">
+            <option value="행사기획부">행사기획부</option>
+            <option value="운영지원부">운영지원부</option>
+            <option value="편집소통부">편집소통부</option>
+            <option value="전체 부서 (공통)">전체 부서 (공통)</option>
+          </select>
+        </div>
+
+        <div class="pt-3 flex gap-2">
+          <button type="button" onclick="closeEditAgendaModal()" class="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50 transition">취소</button>
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow transition">수정 저장하기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4. REAL-TIME ONLINE MEMBERS MODAL -->
+  <div id="modal-online-users" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200 mb-3">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+          <h3 class="text-sm font-bold text-slate-900">실시간 접속 중인 부원 명단</h3>
+        </div>
+        <button onclick="toggleOnlineUsersModal()" class="text-slate-400 hover:text-slate-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+      <div id="online-users-list" class="space-y-2 max-h-72 overflow-y-auto custom-scrollbar pr-1">
+        <!-- dynamically populated -->
+      </div>
+      <div class="mt-4 pt-3 border-t border-slate-100 text-center">
+        <button onclick="toggleOnlineUsersModal()" class="w-full py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. CLOUD PROJECT CONFIG MODAL -->
+  <div id="modal-config" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200 mb-3">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+          <h3 class="text-sm font-bold text-slate-900">클라우드 실시간 동기화 설정</h3>
+        </div>
+        <button onclick="closeConfigModal()" class="text-slate-400 hover:text-slate-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+      <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+        클라우드 Firebase 프로젝트와 실시간 연결되어 있습니다.
+      </p>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-700 mb-1">앱 식별자 (App ID)</label>
+          <input type="text" id="cfg-appid" readonly class="w-full px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-xs font-mono text-slate-600">
+        </div>
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-700 mb-1">현재 연결 상태</label>
+          <div id="cfg-status" class="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-mono text-slate-700">확인 중...</div>
+        </div>
+      </div>
+      <div class="mt-5 pt-3 border-t border-slate-100 flex justify-end">
+        <button onclick="closeConfigModal()" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold">확인</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. KAKAO TALK & MULTI SHARE POPUP MODAL -->
+  <div id="modal-kakao-share" onclick="if(event.target === this) closeKakaoShareModal()" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-200 text-center animate-in fade-in zoom-in-95 duration-200">
+      <div class="w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600 mx-auto flex items-center justify-center font-bold text-xl mb-2.5 shadow-xs border border-indigo-100">
+        📤
+      </div>
+      <h3 class="text-base font-bold text-slate-900 mb-0.5">안건 공유하기</h3>
+      <p class="text-xs text-slate-600 mb-3 px-2 truncate font-medium" id="share-modal-agenda-title">새 안건이 등록되었습니다.</p>
+
+      <div class="p-2.5 bg-amber-50/80 border border-amber-200/80 rounded-xl text-left text-xs text-amber-950 mb-3.5 space-y-0.5">
+        <p class="font-bold flex items-center gap-1">
+          <span>📢 단톡방 공유 카드 메시지</span>
+        </p>
+        <p class="text-[11px] text-amber-800 leading-snug">"📌 새 안건 등록! 브리핑룸에서 투표 또는 의견을 남겨주세요!"</p>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <!-- 1. 카카오톡 단톡방에 알리기 (카카오 노란색 + 카카오톡 공식 SVG) -->
+        <button type="button" onclick="executeKakaoShare()" class="w-full py-2.5 rounded-xl bg-[#FEE500] hover:bg-[#FDD800] text-[#191919] font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition cursor-pointer">
+          <svg class="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24"><path d="M12 3c-5.523 0-10 3.582-10 8 0 2.84 1.848 5.334 4.678 6.746l-.973 3.593c-.087.323.278.587.558.402l4.316-2.855c.465.074.941.114 1.421.114 5.523 0 10-3.582 10-8s-4.477-8-10-8z"/></svg>
+          <span>카카오톡 단톡방에 알리기</span>
+        </button>
+
+        <!-- 2. 안건 링크 복사 (인디고 테마 + 링크 SVG) -->
+        <button type="button" onclick="copyAgendaLink()" class="w-full py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center gap-2 border border-indigo-200 shadow-2xs transition cursor-pointer">
+          <svg class="w-4 h-4 text-indigo-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+          <span>안건 링크 복사</span>
+        </button>
+
+        <!-- 3. 스마트폰 기본 공유 (모바일 기기 + Web Share API 지원 시에만 노출) -->
+        <button type="button" id="btn-native-share" onclick="executeNativeShare()" class="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-2 border border-slate-200 shadow-2xs transition cursor-pointer hidden">
+          <svg class="w-4 h-4 text-slate-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+          <span>스마트폰 기본 공유 (다른 앱)</span>
+        </button>
+
+        <!-- 4. 닫기 -->
+        <button type="button" onclick="closeKakaoShareModal()" class="w-full py-2 rounded-xl text-slate-500 hover:text-slate-700 text-xs font-semibold transition mt-1 cursor-pointer">
+          닫기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. COMMENT EDIT POPUP MODAL -->
+  <div id="modal-comment-edit" onclick="if(event.target === this) closeEditCommentModal()" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-200 text-left">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-lg shadow-xs">
+            💬
+          </div>
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-slate-900">의견(댓글) 수정</h3>
+            <p class="text-[11px] text-slate-500">부원님의 의견을 더 쾌적하게 확인하고 수정할 수 있습니다.</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeEditCommentModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition" aria-label="닫기">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <!-- Agenda & Author Context Card -->
+      <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl mb-3 space-y-1">
+        <div class="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+          <span class="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-bold text-[10px] border border-blue-200 shrink-0">안건</span>
+          <span id="edit-comment-agenda-title" class="font-bold text-slate-800 truncate">안건 제목</span>
+        </div>
+        <div class="text-[11px] text-slate-500 flex items-center gap-1.5">
+          <span class="shrink-0">작성자:</span>
+          <span id="edit-comment-author-info" class="font-semibold text-slate-700">부원명</span>
+        </div>
+      </div>
+
+      <!-- Textarea Input Form -->
+      <div class="space-y-1.5 mb-4">
+        <label for="edit-comment-modal-textarea" class="block text-xs font-bold text-slate-700">수정할 의견 내용</label>
+        <textarea id="edit-comment-modal-textarea" rows="6" placeholder="의견 내용을 입력해주세요..." class="w-full p-3.5 text-xs sm:text-sm rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 bg-white leading-relaxed text-slate-800 placeholder-slate-400 resize-y outline-none transition"></textarea>
+        <div class="flex items-center justify-between text-[11px] text-slate-400 pt-0.5">
+          <span>💡 <kbd class="px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-[10px] font-mono text-slate-600">Ctrl</kbd> + <kbd class="px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-[10px] font-mono text-slate-600">Enter</kbd> 즉시 저장</span>
+          <span id="edit-comment-char-count">0자</span>
+        </div>
+      </div>
+
+      <!-- Modal Actions -->
+      <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+        <button type="button" onclick="closeEditCommentModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition">
+          취소
+        </button>
+        <button type="button" id="btn-save-comment-edit" onclick="saveEditedCommentFromModal()" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+          <span>수정 완료</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
+
+
+

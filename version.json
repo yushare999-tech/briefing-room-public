@@ -1,0 +1,6 @@
+{
+  "version": "v3.0",
+  "name": "스마트 브리핑룸 (Briefing Room)",
+  "updatedAt": "2026-09-11T05:00:00+09:00",
+  "changelog": "v3.0 메이저 릴리즈: 총괄관리자 하드코딩 완전 제거(isMasterAdmin), 오픈소스 패키징 및 선별 동기화 파이프라인 구축"
+}
