@@ -120,7 +120,7 @@ cd briefing-room-public
 
 ### 4단계: 최초 접속 및 총괄관리자(Super Admin) 등록
 
-1. 배포된 웹사이트(https://your-project-id.web.app)에 접속합니다.
+1. 배포된 웹사이트( https://your-project-id.web.app )에 접속합니다.
 2. 3단계에서 window.MASTER_ADMIN_EMAIL로 지정했던 구글 계정으로 **[Google 계정으로 로그인]**합니다.
 3. 최초 로그인 시 구글 서버의 인증을 거쳐 **즉시 최고 총괄관리자 권한이 부여**됩니다.
 4. 상단 헤더에 **[🕵️ 감사 이력]** 및 **[⚙️ 관리자 콘솔]** 버튼이 노출되며 시스템 운영을 즉시 시작할 수 있습니다.
