@@ -72,7 +72,7 @@ cd briefing-room-public
    - 표시되는 irebaseConfig JSON 객체를 복사해 둡니다.
 5. **Cloud Firestore 데이터베이스 생성**:
    - 좌측 메뉴 [빌드] -> [Firestore Database] 클릭 후 **[데이터베이스 만들기]** 클릭.
-   - 위치: sia-northeast3 (서울) 선택 권장.
+   - 위치: asia-northeast3 (서울) 선택 권장.
    - 보안 규칙: [테스트 모드로 시작] 또는 기본 모드로 생성.
 6. **Authentication (사용자 인증) 활성화**:
    - 좌측 메뉴 [빌드] -> [Authentication] -> **[시작하기]** 클릭.
@@ -120,7 +120,7 @@ cd briefing-room-public
 
 ### 4단계: 최초 접속 및 총괄관리자(Super Admin) 등록
 
-1. 배포된 웹사이트(https://your-project-id.web.app)에 접속합니다.
+1. 배포된 웹사이트( https://your-project-id.web.app )에 접속합니다.
 2. 3단계에서 window.MASTER_ADMIN_EMAIL로 지정했던 구글 계정으로 **[Google 계정으로 로그인]**합니다.
 3. 최초 로그인 시 구글 서버의 인증을 거쳐 **즉시 최고 총괄관리자 권한이 부여**됩니다.
 4. 상단 헤더에 **[🕵️ 감사 이력]** 및 **[⚙️ 관리자 콘솔]** 버튼이 노출되며 시스템 운영을 즉시 시작할 수 있습니다.
