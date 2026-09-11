@@ -72,7 +72,7 @@ cd briefing-room-public
    - 표시되는 irebaseConfig JSON 객체를 복사해 둡니다.
 5. **Cloud Firestore 데이터베이스 생성**:
    - 좌측 메뉴 [빌드] -> [Firestore Database] 클릭 후 **[데이터베이스 만들기]** 클릭.
-   - 위치: sia-northeast3 (서울) 선택 권장.
+   - 위치: asia-northeast3 (서울) 선택 권장.
    - 보안 규칙: [테스트 모드로 시작] 또는 기본 모드로 생성.
 6. **Authentication (사용자 인증) 활성화**:
    - 좌측 메뉴 [빌드] -> [Authentication] -> **[시작하기]** 클릭.
